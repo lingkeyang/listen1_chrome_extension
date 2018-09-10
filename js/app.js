@@ -11,11 +11,11 @@
   }
 
   var app = angular.module('listenone', ['angularSoundManager', 'ui-notification', 'loWebManager', 'cfp.hotkeys', 'lastfmClient', 'githubClient'])
-    
+
   app.config( [
     '$compileProvider',
     function( $compileProvider )
-    {   
+    {
         $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|ftp|mailto|chrome-extension|moz-extension|file):/);
     }
   ]);
@@ -48,7 +48,7 @@
   app.run(['angularPlayer', 'Notification', 'loWeb', function(angularPlayer, Notification, loWeb) {
     angularPlayer.setBootstrapTrack(
       loWeb.bootstrapTrack(
-        function(){}, 
+        function(){},
         function(){
           Notification.info('版权原因无法播放，请搜索其他平台');
         })
@@ -66,7 +66,7 @@
             break;
         case 2:
             return "单曲循环";
-            break;    
+            break;
       }
     };
   });
@@ -80,6 +80,12 @@
     }
     if (sourceId == 2) {
       return 'qq';
+    }
+    if (sourceId == 4) {
+      return 'kugou';
+    }
+    if (sourceId == 5) {
+      return 'kuwo';
     }
   }
 
@@ -109,7 +115,7 @@
 
     $scope.lastfm = lastfm;
     $scope.github = github;
-    
+
     $scope.$on('isdoubanlogin:update', function(event, data) {
       $scope.isDoubanLogin = data;
     });
@@ -137,7 +143,7 @@
       }
       $scope.is_window_hidden = 0;
       $scope.resetWindow();
-      
+
       if ($scope.window_url_stack.length > 0 && $scope.window_url_stack[$scope.window_url_stack.length-1] == '/now_playing') {
         // if now playing is top, pop it
         $scope.window_url_stack.splice(-1,1);
@@ -152,7 +158,7 @@
 
       loWeb.get(url).success(function(data) {
           if (data.status == '0') {
-            Notification.info(data.reason);  
+            Notification.info(data.reason);
             $scope.popWindow();
             return;
           }
@@ -221,7 +227,7 @@
                 index = Math.floor(Math.random() * (max - min + 1)) + min;
               }
               angularPlayer.playTrack($scope.songs[index].id);
-              
+
             });
           }, 0);
       });
@@ -306,7 +312,7 @@
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       }).success(function() {
-        Notification.success('添加到歌单成功');  
+        Notification.success('添加到歌单成功');
         $scope.closeDialog();
         // add to current playing list
         if (option_id == $scope.current_list_id) {
@@ -338,7 +344,7 @@
         }
       }).success(function() {
         $rootScope.$broadcast('myplaylist:update');
-        Notification.success('添加到歌单成功');  
+        Notification.success('添加到歌单成功');
         $scope.closeDialog();
       });
     };
@@ -386,7 +392,7 @@
 		$scope.showPlaylist($scope.list_id);
       });
     };
-	
+
     $scope.removeSongFromPlaylist = function(song, list_id) {
       var url = '/remove_track_from_myplaylist';
 
@@ -406,7 +412,7 @@
         if (index > -1) {
           $scope.songs.splice(index, 1);
         }
-        Notification.success('删除成功');  
+        Notification.success('删除成功');
       });
     }
 
@@ -769,7 +775,7 @@
           return;
         }
         angularPlayer.addTrackArray(localCurrentPlaying);
-        
+
         var localPlayerSettings = localStorage.getObject('player-settings');
         if (localPlayerSettings == null) {
           return;
@@ -904,7 +910,12 @@
           var timeReg = /\[(\d{2,})\:(\d{2})(?:\.(\d{1,3}))?\]/g;
 
           while(timeRegResult = timeReg.exec(line)) {
-            var content = line.replace(/\[(\d{2,})\:(\d{2})(?:\.(\d{1,3}))?\]/g, '');
+            var content = line.replace(/\[(\d{2,})\:(\d{2})(?:\.(\d{1,3}))?\]/g, '')
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&amp;/g, "&")
+              .replace(/&quot;/g, '"')
+              .replace(/&apos;/g, "'");
             var min = parseInt(timeRegResult[1]);
             var sec = parseInt(timeRegResult[2]);
             var microsec = 0;
@@ -1071,11 +1082,12 @@
 
   app.controller('InstantSearchController', ['$scope', '$http', '$timeout', 'angularPlayer', 'loWeb',
     function($scope, $http, $timeout, angularPlayer, loWeb) {
+      $scope.originpagelog = [1, 1, 1, 1, 1, 1];  // [网易,虾米,QQ,NULL,酷狗,酷我]
       $scope.tab = 0;
       $scope.keywords = '';
       $scope.loading = false;
-      $scope.curpagelog = [1,1,1];  // [网易,虾米,QQ]
-      $scope.totalpagelog = [1,1,1]; 
+      $scope.curpagelog = $scope.originpagelog.slice(0);
+      $scope.totalpagelog = $scope.originpagelog.slice(0);
       $scope.curpage = 1;
       $scope.totalpage = 1;
 
@@ -1107,7 +1119,7 @@
         // if searchStr is still the same..
         // go ahead and retrieve the data
         if (tmpStr === $scope.keywords)
-        { 
+        {
           performSearch();
         }
       });
@@ -1125,9 +1137,9 @@
 
       function updateCurrentPage(cp){
           if(cp === -1){  // when search words changes,pagenums should be reset.
-              $scope.curpagelog = [1,1,1];
+              $scope.curpagelog = $scope.originpagelog.slice(0);
               $scope.curpage = 1;
-          } 
+          }
           else if(cp >= 0)
               $scope.curpage = $scope.curpagelog[$scope.tab] = cp;
           else  // only tab changed
@@ -1136,12 +1148,12 @@
 
       function updateTotalPage(totalItem){
           if(totalItem === -1) {
-              $scope.totalpagelog = [1,1,1];
+              $scope.totalpagelog = $scope.originpagelog.slice(0);
               $scope.totalpage = 1;
           }
           else if(totalItem >=0)
             $scope.totalpage=$scope.totalpagelog[$scope.tab] = Math.ceil(totalItem/20);
-          else  
+          else
             //just switch tab
               $scope.totalpage=$scope.totalpagelog[$scope.tab];
       }
@@ -1192,11 +1204,11 @@
             var headerHeight = 90;
             var footerHeight = 90;
             element.css('height', (w.height() - headerHeight - footerHeight) + 'px' );
-          };  
-        w.bind('resize', function () {        
-            changeHeight();   // when window size gets changed             
-      });  
-          changeHeight(); // when page loads          
+          };
+        w.bind('resize', function () {
+            changeHeight();   // when window size gets changed
+      });
+          changeHeight(); // when page loads
     };
   });
 
@@ -1284,7 +1296,7 @@
       function(angularPlayer, $document, $rootScope) {
     return function(scope, element, attrs) {
       var x;
-      var container; 
+      var container;
       var mode = attrs.mode;
 
       function onMyMousedown() {
@@ -1370,8 +1382,8 @@
     };
   }]);
 
-  app.controller('MyPlayListController', ['$http','$scope', '$timeout',  
-        'angularPlayer', 'loWeb', 
+  app.controller('MyPlayListController', ['$http','$scope', '$timeout',
+        'angularPlayer', 'loWeb',
         function($http, $scope, $timeout, angularPlayer, loWeb){
     $scope.myplaylists = [];
 
@@ -1400,7 +1412,7 @@
                                         function($http, $scope, $timeout, angularPlayer, loWeb){
     $scope.result = [];
     $scope.tab = 0;
-    $scope.loading = true 
+    $scope.loading = true
 
     $scope.changeTab = function(newTab){
       $scope.tab = newTab;
@@ -1435,9 +1447,9 @@
     };
   }]);
 
-  // app.controller('ImportController', ['$http', 
+  // app.controller('ImportController', ['$http',
   //   '$httpParamSerializerJQLike', '$scope', '$interval',
-  //   '$timeout', '$rootScope', 'Notification', 'angularPlayer', 
+  //   '$timeout', '$rootScope', 'Notification', 'angularPlayer',
   //   function($http, $httpParamSerializerJQLike, $scope,
   //     $interval, $timeout, $rootScope, Notification, angularPlayer){
   //   $scope.validcode_url = "";
@@ -1510,8 +1522,8 @@
 
   //   $scope.start = function() {
   //     // stops any running interval to avoid two intervals running at the same time
-  //     $scope.stop(); 
-      
+  //     $scope.stop();
+
   //     // store the interval promise
   //     promise = $interval(poll, 1000);
   //   };

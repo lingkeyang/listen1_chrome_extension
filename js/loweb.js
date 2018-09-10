@@ -10,10 +10,16 @@ function getProviderByName(sourceName) {
     if (sourceName == 'qq') {
         return qq;
     }
+    if (sourceName == 'kugou') {
+        return kugou;
+    }
+    if (sourceName == 'kuwo') {
+        return kuwo;
+    }
 }
 
 function getAllProviders(){
-    return [netease, xiami, qq];
+    return [netease, xiami, qq, kugou, kuwo];
 }
 
 function getProviderByItemId(itemId) {
@@ -26,6 +32,12 @@ function getProviderByItemId(itemId) {
     }
     if (prefix == 'qq') {
         return qq;
+    }
+    if (prefix == 'kg') {
+        return kugou;
+    }
+    if (prefix == 'kw') {
+        return kuwo;
     }
     if (prefix == 'my') {
         return myplaylist;
@@ -67,7 +79,7 @@ function($rootScope, $log, $http, $httpParamSerializerJQLike) {
                 var url = '/playlist?list_id=' + list_id;
                 return {
                     success: function(fn) {
-							provider.get_playlist(url, $http, $httpParamSerializerJQLike).success(function(data){
+                            provider.get_playlist(url, $http, $httpParamSerializerJQLike).success(function(data){
                             myplaylist.save_myplaylist(data);
                             fn();
                         });
